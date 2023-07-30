@@ -5,30 +5,24 @@ import { Input } from "@/components/ui/input";
 
 import * as z from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Code } from "lucide-react";
+import { VideoIcon } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { formSchema } from "./constants";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { ChatCompletionRequestMessage } from "openai";
 import axios from "axios";
 import Empty from "@/components/empty";
 import { Loader } from "@/components/loader";
-import { cn } from "@/lib/utils";
-import UserAvatar from "@/components/user-avatar";
-import BotAvatar from "@/components/bot-avatar";
-
-import ReactMarkdown from "react-markdown";
 import { useProModal } from "@/hooks/use-pro-modal";
 import { toast } from "react-hot-toast";
 
-const CodePage = () => {
+const VideoPage = () => {
 	const router = useRouter();
 	const proModal = useProModal();
 
 	// MAKE SURE TYPE IS ANY ARRAY
-	const [messages, setMessages] = useState<ChatCompletionRequestMessage[]>([]);
+	const [video, setVideo] = useState<string>();
 	const form = useForm<z.infer<typeof formSchema>>({
 		resolver: zodResolver(formSchema),
 		defaultValues: {
@@ -39,29 +33,25 @@ const CodePage = () => {
 	const isLoading = form.formState.isSubmitting;
 
 	const onSubmit = async (values: z.infer<typeof formSchema>) => {
+		console.log("values", values);
+
 		try {
-			const userMessage: ChatCompletionRequestMessage = {
-				role: "user",
-				content: values?.prompt,
-			};
+			setVideo(undefined);
 
-			const newMessages = [...messages, userMessage];
+			const res = await axios.post("/api/video", values);
 
-			const res = await axios.post("/api/code", {
-				messages: newMessages,
-			});
+			setVideo(res?.data?.[0]);
 
-			setMessages((prev) => [...prev, userMessage, res?.data]); // PREV MESSAGE, OUR QUESTION AND BOT REPLY
 			form.reset();
 		} catch (error: any) {
 			console.log(error);
+
+			// TODO OPEN PRO MODAL
 			if (error?.response?.status === 403) {
 				proModal.onOpen();
 			} else {
 				toast.error("Something went wrong");
 			}
-
-			// TODO OPEN PRO MODAL
 		} finally {
 			router.refresh();
 		}
@@ -69,11 +59,11 @@ const CodePage = () => {
 	return (
 		<div>
 			<Heading
-				title="Code Generation"
-				description="Generate code using descriptive text."
-				icon={Code}
-				iconColor="text-green-700"
-				bgColor="bg-green-700/10"
+				title="Video Generation"
+				description="Turn you prompt into video."
+				icon={VideoIcon}
+				iconColor="text-orange-700"
+				bgColor="bg-orange-700/10"
 			/>
 
 			<div className="px-4 lg:px-8">
@@ -90,9 +80,9 @@ const CodePage = () => {
 										<FormControl className="m-0 p-0">
 											<Input
 												className="border-0 outline-none focus-visible:ring-0 focus-visible:ring-transparent"
-												disabled={isLoading}
-												placeholder="Simple toggle button using React Hooks?"
 												{...field}
+												disabled={isLoading}
+												placeholder="Clown fish swimming around a coral reef"
 											/>
 										</FormControl>
 									</FormItem>
@@ -112,34 +102,13 @@ const CodePage = () => {
 							<Loader />
 						</div>
 					)}
-					{messages?.length === 0 && !isLoading && <Empty label="No conversation started" />}
-					<div className="flex flex-col-reverse gap-y-4">
-						{messages?.map((message) => (
-							<div
-								key={message?.content}
-								className={cn(
-									"p-8 w-full flex items-start gap-x-8 rounded-lg",
-									message.role === "user" ? "bg-white border border-black/10" : "bg-muted"
-								)}
-							>
-								{message?.role === "user" ? <UserAvatar /> : <BotAvatar />}
-								<ReactMarkdown
-									components={{
-										pre: ({ node, ...props }) => (
-											<div className="overflow-auto w-full py-2 bg-black/10 roundde-lg p-2">
-												<pre {...props} />
-											</div>
-										),
-										code: ({ node, ...props }) => (
-											<code className=" bg-black/10 rounded-lg p-1" {...props} />
-										),
-									}}
-									className="text-sm overflow-hidden leading-7"
-								>
-									{message?.content || ""}
-								</ReactMarkdown>
-							</div>
-						))}
+					{!video && !isLoading && <Empty label="No video generated" />}
+					<div className="">
+						{video && (
+							<video controls className="w-full aspect-video mt-8 rounded-lg border border-black">
+								<source src={video} />
+							</video>
+						)}
 					</div>
 				</div>
 			</div>
@@ -147,4 +116,4 @@ const CodePage = () => {
 	);
 };
 
-export default CodePage;
+export default VideoPage;

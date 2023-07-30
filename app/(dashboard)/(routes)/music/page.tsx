@@ -14,9 +14,13 @@ import { useState } from "react";
 import axios from "axios";
 import Empty from "@/components/empty";
 import { Loader } from "@/components/loader";
+import { useProModal } from "@/hooks/use-pro-modal";
+import { toast } from "react-hot-toast";
 
 const MusicPage = () => {
 	const router = useRouter();
+	const proModal = useProModal();
+
 	// MAKE SURE TYPE IS ANY ARRAY
 	const [music, setMusic] = useState<string>();
 	const form = useForm<z.infer<typeof formSchema>>({
@@ -43,6 +47,11 @@ const MusicPage = () => {
 			console.log(error);
 
 			// TODO OPEN PRO MODAL
+			if (error?.response?.status === 403) {
+				proModal.onOpen();
+			} else {
+				toast.error("Something went wrong");
+			}
 		} finally {
 			router.refresh();
 		}
@@ -94,7 +103,13 @@ const MusicPage = () => {
 						</div>
 					)}
 					{!music && !isLoading && <Empty label="No music generated" />}
-					<div className="">Music will be rendered here</div>
+					<div className="">
+						{music && (
+							<audio controls className="w-full mt-8">
+								<source src={music} />
+							</audio>
+						)}
+					</div>
 				</div>
 			</div>
 		</div>
